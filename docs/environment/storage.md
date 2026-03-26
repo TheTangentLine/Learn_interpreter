@@ -99,18 +99,18 @@ Here is what the environment chain looks like when the evaluator is inside the f
 ```
 ┌─────────────────────────────┐
 │ Function scope              │
-│   a      → Integer(1)      │
-│   b      → Integer(2)      │
-│   result → Integer(13)     │
+│   a      → Integer(1)       │
+│   b      → Integer(2)       │
+│   result → Integer(13)      │
 │                             │
 │   outer ────────────────────┼──┐
 └─────────────────────────────┘  │
                                  ▼
 ┌─────────────────────────────┐
 │ Global scope                │
-│   x   → Integer(10)        │
-│   y   → Integer(20)        │
-│   add → Function{...}      │
+│   x   → Integer(10)         │
+│   y   → Integer(20)         │
+│   add → Function{...}       │
 │                             │
 │   outer → nil               │
 └─────────────────────────────┘
@@ -164,11 +164,13 @@ addFive(3);
 ```
 
 When `makeAdder(5)` is called:
+
 1. A new scope is created with `x → Integer(5)`.
 2. The inner `fn(y) { x + y }` is evaluated, creating a `Function` object that captures this scope as its `Env`.
 3. `makeAdder` returns this `Function` object, which is bound to `addFive`.
 
 When `addFive(3)` is called:
+
 1. A new scope is created with `outer` pointing to the **captured scope** (where `x = 5`), not the global scope.
 2. `y → Integer(3)` is bound in this new scope.
 3. `x + y` is evaluated: `y` is found locally (3), `x` is found in the outer captured scope (5). Result: `Integer(8)`.
@@ -200,5 +202,5 @@ The scope chain at this point:
 
 - The environment is a **linked list of hash maps**. Each node holds one scope's bindings plus a pointer to the enclosing scope.
 - **`Set`** always writes to the current scope. **`Get`** walks up the chain until it finds the name or runs out of scopes.
-- **Closures** work because function objects capture their defining environment, and calls extend *that* environment rather than the caller's.
+- **Closures** work because function objects capture their defining environment, and calls extend _that_ environment rather than the caller's.
 - This design is simple, correct, and efficient enough for an educational interpreter. Production interpreters often use more complex structures (e.g. stack-allocated frames), but the core idea of chained scopes is the same.
