@@ -10,7 +10,7 @@ An interpreter reads source code as text and executes it directly, without produ
 Source Code
     │
     ▼
-┌────────┐    Tokens    ┌────────┐     AST     ┌───────────┐
+┌────────┐    Tokens    ┌────────┐     AST      ┌───────────┐
 │  Lexer │ ──────────►  │ Parser │ ──────────►  │ Evaluator │ ──► Result
 └────────┘              └────────┘              └───────────┘
                                                      │  ▲
@@ -27,31 +27,31 @@ Source Code
 
 ## Language Features
 
-| Feature | Example |
-|---|---|
-| Variable binding | `let x = 10;` |
-| Arithmetic | `x + 2 * 3` |
-| Boolean logic | `if (x > 5) { "big" } else { "small" }` |
-| Functions & closures | `let add = fn(a, b) { a + b };` |
-| Return statements | `return x + y;` |
-| String values | `"hello" + " world"` |
-| For loops | `for (let i = 0; i < 10; i = i + 1) { ... }` |
-| Console / file I/O | `print("hello");` |
+| Feature              | Example                                      |
+| -------------------- | -------------------------------------------- |
+| Variable binding     | `let x = 10;`                                |
+| Arithmetic           | `x + 2 * 3`                                  |
+| Boolean logic        | `if (x > 5) { "big" } else { "small" }`      |
+| Functions & closures | `let add = fn(a, b) { a + b };`              |
+| Return statements    | `return x + y;`                              |
+| String values        | `"hello" + " world"`                         |
+| For loops            | `for (let i = 0; i < 10; i = i + 1) { ... }` |
+| Console / file I/O   | `print("hello");`                            |
 
 ## Documentation
 
 Detailed write-ups on how each component works:
 
-| Topic | Document |
-|---|---|
-| Compiled vs Interpreted Languages | [docs/pattern/mechanism.md](docs/pattern/mechanism.md) |
-| Tokens | [docs/lexer/token.md](docs/lexer/token.md) |
-| Lexer | [docs/lexer/lexer.md](docs/lexer/lexer.md) |
-| Abstract Syntax Tree | [docs/parser/ast.md](docs/parser/ast.md) |
-| Parser | [docs/parser/parser.md](docs/parser/parser.md) |
-| Evaluator | [docs/evaluator/evaluator.md](docs/evaluator/evaluator.md) |
-| Environment / Storage | [docs/environment/storage.md](docs/environment/storage.md) |
-| Object Types | [docs/environment/types.md](docs/environment/types.md) |
+| Topic                             | Document                                                   |
+| --------------------------------- | ---------------------------------------------------------- |
+| Compiled vs Interpreted Languages | [docs/pattern/mechanism.md](docs/pattern/mechanism.md)     |
+| Tokens                            | [docs/lexer/token.md](docs/lexer/token.md)                 |
+| Lexer                             | [docs/lexer/lexer.md](docs/lexer/lexer.md)                 |
+| Abstract Syntax Tree              | [docs/parser/ast.md](docs/parser/ast.md)                   |
+| Parser                            | [docs/parser/parser.md](docs/parser/parser.md)             |
+| Evaluator                         | [docs/evaluator/evaluator.md](docs/evaluator/evaluator.md) |
+| Environment / Storage             | [docs/environment/storage.md](docs/environment/storage.md) |
+| Object Types                      | [docs/environment/types.md](docs/environment/types.md)     |
 
 ## Project Structure
 
