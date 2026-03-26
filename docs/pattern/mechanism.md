@@ -31,7 +31,7 @@ A common misconception is that the source code is secretly compiled to a binary 
 
 ```
                 ┌─────────────────────────────────────────────┐
-                │              Interpreter (binary)            │
+                │              Interpreter (binary)           │
                 │                                             │
  Source Code ──►│  1. Read source text                        │──► Output
   (.py file)    │  2. Break it into tokens          (Lexer)   │
@@ -56,11 +56,11 @@ Source Code ──► Lexer ──► Tokens ──► Parser ──► AST ─�
 
 Each stage transforms the program into a progressively more structured representation:
 
-| Stage | Input | Output | What it does |
-|---|---|---|---|
-| **Lexer** | Raw source text | Stream of tokens | Scans characters and groups them into meaningful units (numbers, keywords, operators, etc.) |
-| **Parser** | Tokens | Abstract Syntax Tree | Validates syntax and arranges tokens into a tree that reflects the structure and precedence of the code |
-| **Evaluator** | AST | Computed result | Walks the tree node by node, executing operations and producing values |
+| Stage         | Input           | Output               | What it does                                                                                            |
+| ------------- | --------------- | -------------------- | ------------------------------------------------------------------------------------------------------- |
+| **Lexer**     | Raw source text | Stream of tokens     | Scans characters and groups them into meaningful units (numbers, keywords, operators, etc.)             |
+| **Parser**    | Tokens          | Abstract Syntax Tree | Validates syntax and arranges tokens into a tree that reflects the structure and precedence of the code |
+| **Evaluator** | AST             | Computed result      | Walks the tree node by node, executing operations and producing values                                  |
 
 A fourth component, the **Environment**, sits alongside the evaluator. It is a data structure (essentially a chain of hash maps) that records variable and function bindings so the evaluator can look up names and store new values as the program runs.
 
