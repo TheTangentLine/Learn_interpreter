@@ -128,8 +128,9 @@ func (l *Lexer) readString() string {
 	for l.ch != '"' && l.ch != 0 {
 		l.readChar()
 	}
+	result := l.input[start:l.position]
 	l.readChar()
-	return l.input[start:l.position]
+	return result
 }
 
 func (l *Lexer) skipWhitespace() {
