@@ -27,6 +27,7 @@ Source Code
 
 ## Language Features
 
+
 | Feature              | Example                                      |
 | -------------------- | -------------------------------------------- |
 | Variable binding     | `let x = 10;`                                |
@@ -38,9 +39,40 @@ Source Code
 | For loops            | `for (let i = 0; i < 10; i = i + 1) { ... }` |
 | Console / file I/O   | `print("hello");`                            |
 
+
+## Difficulty Levels for building each component
+
+```
+10 │
+ 9 │                                              ████
+ 8 │                                              ████
+ 7 │                                              ████
+ 6 │                                      ████    ████
+ 5 │                                      ████    ████
+ 4 │                       ████   ████    ████    ████
+ 3 │          ████   ████  ████   ████    ████    ████
+ 2 │          ████   ████  ████   ████    ████    ████
+ 1 │  ████    ████   ████  ████   ████    ████    ████
+   └────────────────────────────────────────────────────
+     Token   Lexer   AST   Env   Object   Eval   Parser
+```
+
+
+| **Component** | **Difficulty** | **Why**                                                                                                                                                                         |
+| ------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Token         | 1/10           | Just constants and a struct. Pure definitions, zero logic.                                                                                                                      |
+| Lexer         | 3/10           | Character-by-character state machine. Repetitive but straightforward. One tricky part: two-char operators (`==`, `!=`).                                                         |
+| AST           | 3/10           | Mostly struct definitions and interfaces. The tricky part is designing the right node hierarchy upfront.                                                                        |
+| Environment   | 4/10           | A hash map with a linked outer pointer. The concept of scope chaining is simple once you see it drawn out.                                                                      |
+| Object Types  | 4/10           | Defining the runtime value system. Mostly boilerplate, but you need to understand *why* `ReturnValue` and `Error` need to be objects.                                           |
+| Evaluator     | 6/10           | Moderate. The tree-walking dispatch is clean, but closures and return value propagation require careful thinking. Easy to get subtly wrong.                                     |
+| Parser        | 9/10           | The hardest component by far. Pratt parsing is a paradigm shift -- the `parseExpression(precedence)` loop is unintuitive until it clicks. Debugging precedence bugs is painful. |
+
+
 ## Documentation
 
 Detailed write-ups on how each component works:
+
 
 | Topic                             | Document                                                   |
 | --------------------------------- | ---------------------------------------------------------- |
@@ -52,6 +84,7 @@ Detailed write-ups on how each component works:
 | Evaluator                         | [docs/evaluator/evaluator.md](docs/evaluator/evaluator.md) |
 | Environment / Storage             | [docs/environment/storage.md](docs/environment/storage.md) |
 | Object Types                      | [docs/environment/types.md](docs/environment/types.md)     |
+
 
 ## Project Structure
 
@@ -74,3 +107,4 @@ my-lang/
 ├── Makefile
 └── README.md
 ```
+
