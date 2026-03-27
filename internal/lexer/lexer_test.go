@@ -12,7 +12,6 @@ let add = fn(a, b) { a + b };
 if (x == 10) { return true; } else { return false; }
 "hello"`
 
-	// Define what tokens you expect, in order
 	expected := []token.Token{
 		{Type: token.LET, Literal: "let"},
 		{Type: token.IDENT, Literal: "x"},
