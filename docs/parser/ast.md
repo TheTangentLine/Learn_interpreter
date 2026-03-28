@@ -159,9 +159,9 @@ Either `true` or `false`.
 
 ```go
 type PrefixExpression struct {
-    Token    token.Token // the prefix token, e.g. ! or -
-    Operator string     // "!" or "-"
-    Right    Expression // the operand
+    Token    token.Token
+    Operator string
+    Right    Expression
 }
 ```
 
