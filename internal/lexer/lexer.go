@@ -89,7 +89,7 @@ func (l *Lexer) NextToken() token.Token {
 	case 0:
 		tok = token.Token{Type: token.EOF, Literal: ""}
 	default:
-		if unicode.IsLetter(rune(l.ch)) {
+		if unicode.IsLetter(rune(l.ch)) || l.ch == '_' {
 			tok.Literal = l.readIdentifier()
 			tok.Type = token.LookupIdent(tok.Literal)
 			return tok
