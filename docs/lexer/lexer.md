@@ -2,7 +2,7 @@
 
 ## Role
 
-The lexer (also called a *scanner* or *tokenizer*) is the first stage of the interpreter pipeline. It takes **raw source code as a string** and produces a **stream of tokens**. Everything downstream -- the parser, the evaluator -- never sees raw text. They only work with tokens.
+The lexer (also called a _scanner_ or _tokenizer_) is the first stage of the interpreter pipeline. It takes **raw source code as a string** and produces a **stream of tokens**. Everything downstream -- the parser, the evaluator -- never sees raw text. They only work with tokens.
 
 ## The Lexer Struct
 
@@ -17,9 +17,9 @@ type Lexer struct {
 }
 ```
 
-- `**input**` -- The entire source code as a single string.
-- `**position**` -- Index of the character we are currently looking at.
-- `**readPosition**` -- Index of the *next* character. This is how we "peek ahead" (e.g. to check if `=` is followed by another `=`).
+- **`input`** -- The entire source code as a single string.
+- **`position`** -- Index of the character we are currently looking at.
+- **`readPosition`** -- Index of the _next_ character. This is how we "peek ahead" (e.g. to check if `=` is followed by another `=`).
 - `**ch` -- The actual byte at `input[position]`. When we have consumed the entire input, `ch` is set to `0` (null byte), which signals end-of-file.
 
 ### Initialization
@@ -52,7 +52,7 @@ func (l *Lexer) readChar() {
 
 ### peekChar
 
-Sometimes we need to look at the next character *without* consuming it (e.g. to distinguish `=` from `==`):
+Sometimes we need to look at the next character _without_ consuming it (e.g. to distinguish `=` from `==`):
 
 ```go
 func (l *Lexer) peekChar() byte {
@@ -207,7 +207,6 @@ Let's trace the lexer through `let x = 5 + 10;` character by character.
 
 **Input:** `let x = 5 + 10;`
 
-
 | Step | `ch` | Action                                                                    | Token produced     |
 | ---- | ---- | ------------------------------------------------------------------------- | ------------------ |
 | 1    | `l`  | `isLetter` → `readIdentifier` reads `"let"` → `LookupIdent` returns `LET` | `{LET, "let"}`     |
@@ -224,7 +223,6 @@ Let's trace the lexer through `let x = 5 + 10;` character by character.
 | 12   | `;`  | matches `';'` case                                                        | `{SEMICOLON, ";"}` |
 | 13   | `0`  | null byte → EOF                                                           | `{EOF, ""}`        |
 
-
 **Final token stream:**
 
 ```
@@ -237,4 +235,3 @@ LET("let")  IDENT("x")  ASSIGN("=")  INT("5")  PLUS("+")  INT("10")  SEMICOLON("
 - It never backtracks -- it always moves forward through the input.
 - Multi-character tokens (identifiers, numbers, two-character operators) require reading ahead, but the logic remains simple loops and peek operations.
 - The lexer's output is a **flat stream**. It knows nothing about syntax, precedence, or nesting. That is the parser's job.
-

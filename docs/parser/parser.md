@@ -165,73 +165,57 @@ This loop is what makes precedence work. When we are inside a `*` parse (high pr
 
 Tokens: `INT(2)  PLUS  INT(3)  ASTERISK  INT(4)  EOF`
 
-### Step-by-step trace
+### Call stack trace
 
-**Call:** `parseExpression(LOWEST)`
+```mermaid
+sequenceDiagram
+    participant A as parseExpression(LOWEST)
+    participant B as parseInfixExpression(+)
+    participant C as parseExpression(SUM)
+    participant D as parseInfixExpression(*)
+    participant E as parseExpression(PRODUCT)
 
-| # | Action | curToken | peekToken | Notes |
-|---|---|---|---|---|
-| 1 | Look up prefix for `INT` → `parseIntegerLiteral` | `INT(2)` | `PLUS` | |
-| 2 | Call `parseIntegerLiteral()` → returns `IntegerLiteral(2)` | `INT(2)` | `PLUS` | `leftExp = IntegerLiteral(2)` |
-| 3 | Check loop: `LOWEST(1) < peekPrecedence(PLUS=4)`? **Yes** | | `PLUS` | Enter loop |
-| 4 | Look up infix for `PLUS` → `parseInfixExpression` | | | |
-| 5 | `nextToken()` | `PLUS` | `INT(3)` | |
-| 6 | Call `parseInfixExpression(IntegerLiteral(2))`: | | | |
-| | - saves operator `+` and left=`IntegerLiteral(2)` | | | |
-| | - calls `nextToken()` | `INT(3)` | `ASTERISK` | |
-| | - calls `parseExpression(SUM)` **recursively** | | | |
-
-**Recursive call:** `parseExpression(SUM)` (precedence = 4)
-
-| # | Action | curToken | peekToken | Notes |
-|---|---|---|---|---|
-| 7 | Prefix for `INT` → `parseIntegerLiteral()` → `IntegerLiteral(3)` | `INT(3)` | `ASTERISK` | `leftExp = IntegerLiteral(3)` |
-| 8 | Check loop: `SUM(4) < peekPrecedence(ASTERISK=5)`? **Yes** | | `ASTERISK` | Enter loop |
-| 9 | Infix for `ASTERISK` → `parseInfixExpression` | | | |
-| 10 | `nextToken()` | `ASTERISK` | `INT(4)` | |
-| 11 | Call `parseInfixExpression(IntegerLiteral(3))`: | | | |
-| | - saves operator `*`, left=`IntegerLiteral(3)` | | | |
-| | - calls `nextToken()` | `INT(4)` | `EOF` | |
-| | - calls `parseExpression(PRODUCT)` **recursively** | | | |
-
-**Recursive call:** `parseExpression(PRODUCT)` (precedence = 5)
-
-| # | Action | curToken | peekToken | Notes |
-|---|---|---|---|---|
-| 12 | Prefix for `INT` → `IntegerLiteral(4)` | `INT(4)` | `EOF` | `leftExp = IntegerLiteral(4)` |
-| 13 | Check loop: `PRODUCT(5) < peekPrecedence(EOF=0)`? **No** | | | Exit loop |
-| 14 | Return `IntegerLiteral(4)` | | | |
-
-**Back in step 11:** `parseInfixExpression` now has right=`IntegerLiteral(4)`, builds:
-
+    Note over A: curToken=INT(2), peekToken=PLUS
+    A->>A: prefix[INT]() → leftExp = IntegerLiteral(2)
+    Note over A: LOWEST(1) < peekPrec(PLUS=4) ✓ — enter loop
+    A->>B: infix[PLUS](IntegerLiteral(2))
+    Note over B: saves op="+", left=IntegerLiteral(2)
+    Note over B: nextToken() → curToken=INT(3), peekToken=ASTERISK
+    B->>C: parseExpression(SUM)
+    Note over C: curToken=INT(3), peekToken=ASTERISK
+    C->>C: prefix[INT]() → leftExp = IntegerLiteral(3)
+    Note over C: SUM(4) < peekPrec(ASTERISK=5) ✓ — enter loop
+    C->>D: infix[ASTERISK](IntegerLiteral(3))
+    Note over D: saves op="*", left=IntegerLiteral(3)
+    Note over D: nextToken() → curToken=INT(4), peekToken=EOF
+    D->>E: parseExpression(PRODUCT)
+    Note over E: curToken=INT(4), peekToken=EOF
+    E->>E: prefix[INT]() → leftExp = IntegerLiteral(4)
+    Note over E: PRODUCT(5) < peekPrec(EOF=0) ✗ — exit loop
+    E-->>D: IntegerLiteral(4)
+    Note over D: right=IntegerLiteral(4) → return InfixExpression(* 3 4)
+    D-->>C: InfixExpression(* 3 4)
+    Note over C: SUM(4) < peekPrec(EOF=0) ✗ — exit loop
+    C-->>B: InfixExpression(* 3 4)
+    Note over B: right=InfixExpression(* 3 4) → return InfixExpression(+ 2 (* 3 4))
+    B-->>A: InfixExpression(+ 2 (* 3 4))
+    Note over A: LOWEST(1) < peekPrec(EOF=0) ✗ — exit loop
 ```
-InfixExpression(*)
-├── Left:  IntegerLiteral(3)
-└── Right: IntegerLiteral(4)
-```
-
-**Back in step 8 loop:** Check again: `SUM(4) < peekPrecedence(EOF=0)`? **No** → exit loop, return the `*` node.
-
-**Back in step 6:** `parseInfixExpression` now has right=`InfixExpression(*)`, builds:
-
-```
-InfixExpression(+)
-├── Left:  IntegerLiteral(2)
-└── Right: InfixExpression(*)
-           ├── Left:  IntegerLiteral(3)
-           └── Right: IntegerLiteral(4)
-```
-
-**Back in step 3 loop:** Check again: `LOWEST(1) < peekPrecedence(EOF=0)`? **No** → exit loop, return the `+` node.
 
 ### Final AST
 
-```
-    (+)
-   /   \
-  2    (*)
-      /   \
-     3     4
+```mermaid
+graph TD
+    plus["InfixExpression(+)"]
+    two["IntegerLiteral(2)"]
+    mul["InfixExpression(*)"]
+    three["IntegerLiteral(3)"]
+    four["IntegerLiteral(4)"]
+
+    plus --> two
+    plus --> mul
+    mul  --> three
+    mul  --> four
 ```
 
 Multiplication is deeper in the tree, so it executes first. The result is `2 + 12 = 14`.
