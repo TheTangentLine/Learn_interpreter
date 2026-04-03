@@ -237,6 +237,14 @@ func (p *Parser) parseStatement() ast.Statement {
 }
 ```
 
+The three paths produce different AST node types:
+
+| `curToken` | Function called | AST node produced |
+|---|---|---|
+| `LET` | `parseLetStatement` | `*ast.LetStatement` |
+| `RETURN` | `parseReturnStatement` | `*ast.ReturnStatement` |
+| anything else | `parseExpressionStatement` | `*ast.ExpressionStatement` |
+
 ### parseLetStatement
 
 Expects the pattern `let <identifier> = <expression>;`:
@@ -260,6 +268,58 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 }
 ```
 
+### parseReturnStatement
+
+`return` is simpler than `let` — just the keyword followed by an expression:
+
+```go
+func (p *Parser) parseReturnStatement() ast.Statement {
+    stmt := &ast.ReturnStatement{Token: p.curToken}
+    p.nextToken()
+    stmt.ReturnValue = p.parseExpression(LOWEST)
+    if p.peekToken.Type == token.SEMICOLON {
+        p.nextToken()
+    }
+    return stmt
+}
+```
+
+After consuming `return`, the parser advances one token and delegates to `parseExpression`. Any valid expression is legal after `return`.
+
+### parseExpressionStatement
+
+Anything that is not `let` or `return` falls through as an expression-used-as-a-statement. A bare function call like `add(2, 3)` or a standalone arithmetic expression like `5 * 10` is parsed this way. The trailing semicolon is optional:
+
+```go
+func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
+    stmt := &ast.ExpressionStatement{Token: p.curToken}
+    stmt.Expression = p.parseExpression(LOWEST)
+    if p.peekToken.Type == token.SEMICOLON {
+        p.nextToken()
+    }
+    return stmt
+}
+```
+
+### parseBlockStatement
+
+Block statements appear inside `if` bodies, `else` bodies, and function bodies. A block is structurally identical to a program — a sequence of statements — except it stops at `}` instead of EOF:
+
+```go
+func (p *Parser) parseBlockStatement() *ast.BlockStatement {
+    block := &ast.BlockStatement{Token: p.curToken}
+    p.nextToken() // move past {
+    for p.curToken.Type != token.RBRACE && p.curToken.Type != token.EOF {
+        stmt := p.parseStatement()
+        if stmt != nil {
+            block.Statements = append(block.Statements, stmt)
+        }
+        p.nextToken()
+    }
+    return block
+}
+```
+
 ### The Top-Level Loop
 
 The parser's entry point repeatedly parses statements until EOF:
@@ -277,6 +337,227 @@ func (p *Parser) ParseProgram() *ast.Program {
     return program
 }
 ```
+
+## Parsing Complex Expressions
+
+Some prefix parse functions are more involved than a single token. These handle the language's compound expressions.
+
+### parseIfExpression
+
+`if` is parsed as an **expression**, not a statement. This means it can appear anywhere an expression is valid — on the right-hand side of `let`, as a function argument, etc. The grammar is:
+
+```
+if ( <condition> ) { <consequence> } [ else { <alternative> } ]
+```
+
+```go
+func (p *Parser) parseIfExpression() ast.Expression {
+    expr := &ast.IfExpression{Token: p.curToken}
+
+    if !p.expectPeek(token.LPAREN) { return nil }
+    p.nextToken()
+    expr.Condition = p.parseExpression(LOWEST)
+
+    if !p.expectPeek(token.RPAREN) { return nil }
+    if !p.expectPeek(token.LBRACE) { return nil }
+    expr.Consequence = p.parseBlockStatement()
+
+    if p.peekToken.Type == token.ELSE {
+        p.nextToken()
+        if !p.expectPeek(token.LBRACE) { return nil }
+        expr.Alternative = p.parseBlockStatement()
+    }
+
+    return expr
+}
+```
+
+`expectPeek` advances only if the next token matches the expected type; otherwise it appends an error and returns `false`. This is how the parser enforces required punctuation without hard-coded panics. `Alternative` is `nil` when there is no `else` branch.
+
+### parseFunctionLiteral
+
+Function literals follow the grammar `fn ( <params> ) { <body> }`. Both the parameter list and the body are parsed by dedicated helpers:
+
+```go
+func (p *Parser) parseFunctionLiteral() ast.Expression {
+    lit := &ast.FunctionLiteral{Token: p.curToken}
+
+    if !p.expectPeek(token.LPAREN) { return nil }
+    lit.Parameters = p.parseFunctionParameters()
+
+    if !p.expectPeek(token.LBRACE) { return nil }
+    lit.Body = p.parseBlockStatement()
+
+    return lit
+}
+```
+
+`parseFunctionParameters` handles the comma-separated identifier list:
+
+```go
+func (p *Parser) parseFunctionParameters() []*ast.Identifier {
+    var identifiers []*ast.Identifier
+    if p.peekToken.Type == token.RPAREN {
+        p.nextToken()            // empty parameter list: fn() { ... }
+        return identifiers
+    }
+    p.nextToken()
+    identifiers = append(identifiers, &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal})
+    for p.peekToken.Type == token.COMMA {
+        p.nextToken(); p.nextToken()
+        identifiers = append(identifiers, &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal})
+    }
+    if !p.expectPeek(token.RPAREN) { return nil }
+    return identifiers
+}
+```
+
+### parseCallExpression
+
+Function calls are parsed as **infix** expressions. When the parser finishes parsing an expression and sees `(` as the next token, the infix parse function for `LPAREN` fires — `parseCallExpression`:
+
+```go
+func (p *Parser) parseCallExpression(left ast.Expression) ast.Expression {
+    call := &ast.CallExpression{Token: p.curToken, Function: left}
+    call.Arguments = p.parseCallArguments()
+    return call
+}
+```
+
+`left` is whatever was just parsed — an identifier like `add`, or even a function literal `fn(x) { x }`. This is what allows immediate invocation: `fn(x) { x }(42)`.
+
+`parseCallArguments` collects a comma-separated list of full expressions, each parsed at `LOWEST` precedence so they can contain their own operators:
+
+```go
+func (p *Parser) parseCallArguments() []ast.Expression {
+    var args []ast.Expression
+    if p.peekToken.Type == token.RPAREN {
+        p.nextToken()
+        return args
+    }
+    p.nextToken()
+    args = append(args, p.parseExpression(LOWEST))
+    for p.peekToken.Type == token.COMMA {
+        p.nextToken(); p.nextToken()
+        args = append(args, p.parseExpression(LOWEST))
+    }
+    if !p.expectPeek(token.RPAREN) { return nil }
+    return args
+}
+```
+
+## Worked Example: A Complete Program
+
+Input:
+
+```
+let add = fn(x, y) { x + y; };
+let result = add(2, 3 * 4);
+return result;
+```
+
+`ParseProgram` loops three times, once per statement.
+
+```mermaid
+sequenceDiagram
+    participant PP  as ParseProgram
+    participant PS  as parseStatement
+    participant PLS as parseLetStatement
+    participant PRS as parseReturnStatement
+    participant PE  as parseExpression
+    participant PFL as parseFunctionLiteral
+    participant PFP as parseFunctionParameters
+    participant PBS as parseBlockStatement
+    participant PES as parseExpressionStatement
+    participant PCE as parseCallExpression
+    participant PCA as parseCallArguments
+
+    Note over PP: ── stmt 1 ── curToken=LET
+    PP->>PS: parseStatement()
+    PS->>PLS: curToken=LET → parseLetStatement()
+    Note over PLS: expectPeek(IDENT)→add<br/>expectPeek(ASSIGN)→=<br/>nextToken()→fn
+    PLS->>PE: parseExpression(LOWEST)
+    Note over PE: curToken=fn → prefix fn: parseFunctionLiteral
+    PE->>PFL: parseFunctionLiteral()
+    PFL->>PFP: parseFunctionParameters()
+    Note over PFP: x , y
+    PFP-->>PFL: [x, y]
+    PFL->>PBS: parseBlockStatement()
+    PBS->>PES: parseStatement() → parseExpressionStatement()
+    PES->>PE: parseExpression(LOWEST)
+    Note over PE: x + y → InfixExpression(+, x, y)
+    PE-->>PES: InfixExpression(+, x, y)
+    PES-->>PBS: ExpressionStatement
+    PBS-->>PFL: BlockStatement{ [x+y] }
+    PFL-->>PE: FunctionLiteral{ params:[x,y], body:[x+y] }
+    PE-->>PLS: FunctionLiteral
+    PLS-->>PS: LetStatement{ add = FunctionLiteral }
+    PS-->>PP: LetStatement
+
+    Note over PP: ── stmt 2 ── curToken=LET
+    PP->>PS: parseStatement()
+    PS->>PLS: curToken=LET → parseLetStatement()
+    Note over PLS: expectPeek(IDENT)→result<br/>expectPeek(ASSIGN)→=<br/>nextToken()→add
+    PLS->>PE: parseExpression(LOWEST)
+    Note over PE: curToken=IDENT(add) → parseIdentifier → Identifier(add)<br/>peekToken=LPAREN (CALL=6), LOWEST(1) < 6 → infix loop
+    PE->>PCE: parseCallExpression(Identifier(add))
+    PCE->>PCA: parseCallArguments()
+    Note over PCA: nextToken()→2 → IntegerLiteral(2)<br/>comma → nextToken()×2 → 3
+    PCA->>PE: parseExpression(LOWEST) for "3 * 4"
+    Note over PE: 3 * 4 → InfixExpression(*, 3, 4)
+    PE-->>PCA: InfixExpression(*, 3, 4)
+    PCA-->>PCE: [IntegerLiteral(2), InfixExpression(*,3,4)]
+    PCE-->>PE: CallExpression{ fn:add, args:[2, 3*4] }
+    PE-->>PLS: CallExpression
+    PLS-->>PS: LetStatement{ result = CallExpression }
+    PS-->>PP: LetStatement
+
+    Note over PP: ── stmt 3 ── curToken=RETURN
+    PP->>PS: parseStatement()
+    PS->>PRS: curToken=RETURN → parseReturnStatement()
+    Note over PRS: nextToken()→result
+    PRS->>PE: parseExpression(LOWEST)
+    Note over PE: IDENT(result) → Identifier(result)
+    PE-->>PRS: Identifier(result)
+    PRS-->>PS: ReturnStatement{ result }
+    PS-->>PP: ReturnStatement
+```
+
+### Resulting AST
+
+```mermaid
+graph TD
+    prog["Program"]
+
+    let1["LetStatement\nName: add"]
+    fn["FunctionLiteral\nfn(x, y)"]
+    fnbody["BlockStatement"]
+    xplusy["InfixExpression(+)\nx + y"]
+
+    let2["LetStatement\nName: result"]
+    call["CallExpression\nadd(...)"]
+    arg1["IntegerLiteral(2)"]
+    mul["InfixExpression(*)\n3 * 4"]
+
+    ret["ReturnStatement"]
+    res["Identifier(result)"]
+
+    prog --> let1
+    prog --> let2
+    prog --> ret
+
+    let1 --> fn
+    fn --> fnbody
+    fnbody --> xplusy
+
+    let2 --> call
+    call --> arg1
+    call --> mul
+
+    ret --> res
+```
+
+The evaluator walks this tree top-down: it binds `add` to the function object, calls it with `2` and `12` (the result of `3 * 4`), binds `result` to `14`, then returns `14`.
 
 ## Key Takeaways
 
