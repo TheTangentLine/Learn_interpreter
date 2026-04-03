@@ -535,7 +535,7 @@ graph TD
     xplusy["InfixExpression(+)\nx + y"]
 
     let2["LetStatement\nName: result"]
-    call["CallExpression\nadd(...)"]
+    callExpr["CallExpression\nadd(...)"]
     arg1["IntegerLiteral(2)"]
     mul["InfixExpression(*)\n3 * 4"]
 
@@ -550,9 +550,9 @@ graph TD
     fn --> fnbody
     fnbody --> xplusy
 
-    let2 --> call
-    call --> arg1
-    call --> mul
+    let2 --> callExpr
+    callExpr --> arg1
+    callExpr --> mul
 
     ret --> res
 ```
