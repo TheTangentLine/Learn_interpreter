@@ -306,34 +306,63 @@ add(2, 3);
 
 ### Trace
 
-**1. Parse** produces this AST:
+```mermaid
+sequenceDiagram
+    participant PG as evalProgram
+    participant EV as Eval
+    participant CE as evalCallExpression
+    participant AF as applyFunction
+    participant EN as Environment
 
+    Note over PG: ── stmt 1 ── LetStatement
+
+    PG->>EV: Eval(LetStatement)
+    EV->>EV: Eval(FunctionLiteral)
+    Note over EV: captures params:[a,b], body:{a+b}, env:globalEnv
+    EV-->>EV: Function{ params:[a,b], body, env:globalEnv }
+    EV->>EN: globalEnv.Set("add", Function{...})
+    EV-->>PG: nil
+
+    Note over PG: ── stmt 2 ── ExpressionStatement → CallExpression
+
+    PG->>EV: Eval(ExpressionStatement)
+    EV->>CE: evalCallExpression(add(2,3), globalEnv)
+
+    CE->>EV: Eval(Identifier "add")
+    EV->>EN: globalEnv.Get("add")
+    EN-->>EV: Function{ params:[a,b], body, env:globalEnv }
+    EV-->>CE: Function{...}
+
+    CE->>EV: Eval(IntegerLiteral 2)
+    EV-->>CE: Integer(2)
+    CE->>EV: Eval(IntegerLiteral 3)
+    EV-->>CE: Integer(3)
+
+    CE->>AF: applyFunction(Function{...}, [Integer(2), Integer(3)])
+    Note over AF: extendFunctionEnv →<br/>enclosedEnv { outer: globalEnv }
+    AF->>EN: enclosedEnv.Set("a", Integer(2))
+    AF->>EN: enclosedEnv.Set("b", Integer(3))
+
+    AF->>EV: Eval(BlockStatement, enclosedEnv)
+    EV->>EV: Eval(InfixExpression a+b, enclosedEnv)
+
+    EV->>EV: Eval(Identifier "a")
+    EV->>EN: enclosedEnv.Get("a")
+    EN-->>EV: Integer(2)
+
+    EV->>EV: Eval(Identifier "b")
+    EV->>EN: enclosedEnv.Get("b")
+    EN-->>EV: Integer(3)
+
+    Note over EV: evalIntegerInfixExpression("+", 2, 3)
+    EV-->>AF: Integer(5)
+    Note over AF: unwrapReturnValue → Integer(5)
+    AF-->>CE: Integer(5)
+    CE-->>EV: Integer(5)
+    EV-->>PG: Integer(5)
 ```
-Program
-├── LetStatement: let add = FunctionLiteral(a, b) { a + b }
-└── ExpressionStatement: CallExpression add(2, 3)
-```
 
-**2. Eval the Program** -- evaluate each statement in order.
-
-**3. Eval LetStatement:**
-- Eval the value: `FunctionLiteral` → creates `Function{Params: [a, b], Body: {a+b}, Env: globalEnv}`.
-- `env.Set("add", Function{...})` — binds the name `add` in the global environment.
-
-**4. Eval ExpressionStatement → Eval CallExpression:**
-- Eval `add` → looks up `"add"` in env → gets `Function{Params: [a,b], Body: {a+b}, Env: globalEnv}`.
-- Eval arguments: `Eval(2)` → `Integer(2)`, `Eval(3)` → `Integer(3)`.
-- `applyFunction`:
-  - Create new scope: `enclosedEnv { outer: globalEnv }`.
-  - Bind params: `enclosedEnv.Set("a", Integer(2))`, `enclosedEnv.Set("b", Integer(3))`.
-  - Eval body `{ a + b }` in `enclosedEnv`:
-    - Eval `a + b` → InfixExpression:
-      - Eval `a` → `enclosedEnv.Get("a")` → `Integer(2)`.
-      - Eval `b` → `enclosedEnv.Get("b")` → `Integer(3)`.
-      - Apply `+` → `Integer(2 + 3)` → `Integer(5)`.
-  - Return `Integer(5)`.
-
-**Result: `5`**
+**Result: `Integer(5)`**
 
 ## Key Takeaways
 
