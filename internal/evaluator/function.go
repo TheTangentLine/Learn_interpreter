@@ -37,4 +37,9 @@ func extendFunctionEnv(fn *object.Function, args []object.Object) *object.Enviro
     return env
 }
 
-func unwrapReturnValue(obj object.Object) object.Object
+func unwrapReturnValue(obj object.Object) object.Object {
+    if returnVal, ok := obj.(*object.ReturnValue); ok {
+        return returnVal.Value
+    }
+    return obj
+}
