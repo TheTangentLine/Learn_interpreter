@@ -23,15 +23,15 @@ type Object interface {
 	Inspect() string
 }
 
-// ----------Interger----------
-type Interger struct {
+// ----------Integer----------
+type Integer struct {
 	Value int64
 }
 
-func (i *Interger) Type() ObjectType {
+func (i *Integer) Type() ObjectType {
 	return INTEGER_OBJ
 }
-func (i *Interger) Inspect() string {
+func (i *Integer) Inspect() string {
 	return fmt.Sprintf("%d", i.Value)
 }
 
