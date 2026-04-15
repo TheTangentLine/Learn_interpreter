@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/thetangentline/interpreter/internal/evaluator"
 	"github.com/thetangentline/interpreter/internal/lexer"
@@ -11,13 +12,21 @@ import (
 	"github.com/thetangentline/interpreter/internal/repl"
 )
 
+func checkFileExtension(path string) bool {
+	return filepath.Ext(path) == ".dot"
+}
+
 func main() {
 	args := os.Args[1:]
 
 	if len(args) == 0 {
-		fmt.Println("Welcome to the Monkey REPL. Type away!")
 		repl.Start(os.Stdin, os.Stdout)
 		return
+	}
+
+	if !checkFileExtension(args[0]) {
+		fmt.Fprintln(os.Stderr, "file must have a .dot extension")
+		os.Exit(1)
 	}
 
 	content, err := os.ReadFile(args[0])
