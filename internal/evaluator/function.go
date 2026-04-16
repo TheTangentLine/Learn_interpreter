@@ -15,7 +15,17 @@ func evalCallExpression(node *ast.CallExpression, env *object.Environment) objec
     return applyFunction(function, args)
 }
 
-func evalExpressions(exps []ast.Expression, env *object.Environment) []object.Object
+func evalExpressions(exps []ast.Expression, env *object.Environment) []object.Object {
+    result := []object.Object{}
+    for _, exp := range exps {
+        eval := Eval(exp, env)
+        if isError(eval) {
+            return []object.Object{eval}
+        }
+        result = append(result, eval)
+    }
+    return result
+}
 
 
 func applyFunction(fn object.Object, args []object.Object) object.Object {
