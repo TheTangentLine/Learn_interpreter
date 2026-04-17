@@ -1,0 +1,20 @@
+let uniquePaths = fn(m, n, r, c) {
+    if (r == m - 1) {
+        if (c == n - 1) {
+            return 1;
+        }
+    }
+    if (r == m) {
+        return 0;
+    }
+    if (c == n) {
+        return 0;
+    }
+
+    let down = uniquePaths(m, n, r + 1, c);
+    let right = uniquePaths(m, n, r, c + 1);
+    let sum = down + right;
+    return sum;
+}
+
+uniquePaths(4, 5, 0, 0);
