@@ -23,15 +23,23 @@ type BlockStatement struct {
 	Statements []Statement
 }
 
+type AssignStatement struct {
+	Token token.Token // the IDENT token
+	Name  *Identifier
+	Value Expression
+}
+
 func (ls *LetStatement) statementNode()        {}
 func (rs *ReturnStatement) statementNode()     {}
 func (es *ExpressionStatement) statementNode() {}
 func (bs *BlockStatement) statementNode()      {}
+func (as *AssignStatement) statementNode()     {}
 
 func (ls *LetStatement) TokenLiteral() string        { return ls.Token.Literal }
 func (rs *ReturnStatement) TokenLiteral() string     { return rs.Token.Literal }
 func (es *ExpressionStatement) TokenLiteral() string { return es.Token.Literal }
 func (bs *BlockStatement) TokenLiteral() string      { return bs.Token.Literal }
+func (as *AssignStatement) TokenLiteral() string     { return as.Token.Literal }
 
 func (ls *LetStatement) String() string {
 	val := "<nil>"
@@ -59,4 +67,11 @@ func (bs *BlockStatement) String() string {
 		block += s.String() + ";\n"
 	}
 	return block
+}
+func (as *AssignStatement) String() string {
+	val := "<nil>"
+	if as.Value != nil {
+		val = as.Value.String()
+	}
+	return as.Name.String() + " = " + val
 }
