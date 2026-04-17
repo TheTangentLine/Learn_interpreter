@@ -1,4 +1,7 @@
-.PHONY: test test-verbose test-lexer test-lexer-verbose
+.PHONY: build test test-verbose test-lexer test-lexer-verbose
+
+build:
+	go build -o bin/dot ./cmd/dot/
 
 test:
 	go test ./...
