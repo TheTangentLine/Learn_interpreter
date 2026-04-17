@@ -34,7 +34,12 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
     case *ast.LetStatement:
         val := Eval(node.Value, env)
         if isError(val) { return val }
-        env.Set(node.Name.Value, val)
+        env.Define(node.Name.Value, val)
+    case *ast.AssignStatement:
+        val := Eval(node.Value, env)
+        if isError(val) { return val }
+        _, err := env.Assign(node.Name.Value, val)
+        if err != nil { return newError("%s", err.Error()) }
     case *ast.ReturnStatement:
         val := Eval(node.ReturnValue, env)
         if isError(val) { return val }
@@ -183,7 +188,7 @@ When we encounter a name like `x`, we look it up in the environment:
 func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {
     val, ok := env.Get(node.Value)
     if !ok {
-        return newError("identifier not found: " + node.Value)
+        return newError("identifier not found: %s", node.Value)
     }
     return val
 }
@@ -199,10 +204,24 @@ Evaluate the right-hand side, then store the result in the environment under the
 case *ast.LetStatement:
     val := Eval(node.Value, env)
     if isError(val) { return val }
-    env.Set(node.Name.Value, val)
+    env.Define(node.Name.Value, val)
 ```
 
 After `let x = 5;`, calling `env.Get("x")` returns `Integer(5)`.
+
+### Assign Statements (Variable Reassignment)
+
+To update a variable that was already declared, the evaluator calls `env.Assign` instead of `env.Define`. Unlike `Define`, which always writes to the current scope, `Assign` walks up the scope chain until it finds an existing binding to overwrite:
+
+```go
+case *ast.AssignStatement:
+    val := Eval(node.Value, env)
+    if isError(val) { return val }
+    _, err := env.Assign(node.Name.Value, val)
+    if err != nil { return newError("%s", err.Error()) }
+```
+
+If the variable was never declared with `let`, `env.Assign` returns an error and evaluation stops. You cannot assign to an undeclared name.
 
 ### Function Literals (Creating Closures)
 
@@ -253,7 +272,7 @@ func applyFunction(fn object.Object, args []object.Object) object.Object {
 func extendFunctionEnv(fn *object.Function, args []object.Object) *object.Environment {
     env := object.NewEnclosedEnvironment(fn.Env) // new scope, outer = closure env
     for i, param := range fn.Parameters {
-        env.Set(param.Value, args[i]) // bind parameter names to argument values
+        env.Define(param.Value, args[i]) // bind parameter names to argument values
     }
     return env
 }
@@ -320,7 +339,7 @@ sequenceDiagram
     EV->>EV: Eval(FunctionLiteral)
     Note over EV: captures params:[a,b], body:{a+b}, env:globalEnv
     EV-->>EV: Function{ params:[a,b], body, env:globalEnv }
-    EV->>EN: globalEnv.Set("add", Function{...})
+    EV->>EN: globalEnv.Define("add", Function{...})
     EV-->>PG: nil
 
     Note over PG: ── stmt 2 ── ExpressionStatement → CallExpression
@@ -340,8 +359,8 @@ sequenceDiagram
 
     CE->>AF: applyFunction(Function{...}, [Integer(2), Integer(3)])
     Note over AF: extendFunctionEnv →<br/>enclosedEnv { outer: globalEnv }
-    AF->>EN: enclosedEnv.Set("a", Integer(2))
-    AF->>EN: enclosedEnv.Set("b", Integer(3))
+    AF->>EN: enclosedEnv.Define("a", Integer(2))
+    AF->>EN: enclosedEnv.Define("b", Integer(3))
 
     AF->>EV: Eval(BlockStatement, enclosedEnv)
     EV->>EV: Eval(InfixExpression a+b, enclosedEnv)

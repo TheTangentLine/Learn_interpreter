@@ -40,20 +40,39 @@ func NewEnclosedEnvironment(outer *Environment) *Environment {
 
 `NewEnvironment` creates a fresh global scope with no parent. `NewEnclosedEnvironment` creates a child scope that chains to an existing environment.
 
-## Get and Set
+## Get, Define, and Assign
 
-### Set
+### Define
 
-Storing a binding is simple -- write it into the current scope's hash map:
+`Define` creates a new binding in the **current** scope:
 
 ```go
-func (e *Environment) Set(name string, val Object) Object {
-    e.store[name] = val
-    return val
+func (e *Environment) Define(name string, value Object) Object {
+    e.store[name] = value
+    return value
 }
 ```
 
-`Set` always writes to the **current** scope. It never walks up the chain. This means a `let x = 10;` inside a function body creates a new local binding even if `x` already exists in an outer scope.
+`Define` never walks up the chain. This means `let x = 10;` inside a function body creates a new local binding even if `x` already exists in an outer scope. It is called by the evaluator when it processes a `let` statement.
+
+### Assign (Reassignment)
+
+`Assign` updates an **existing** binding, walking up the scope chain to find it:
+
+```go
+func (e *Environment) Assign(name string, value Object) (Object, error) {
+    if _, isFound := e.store[name]; isFound {
+        e.store[name] = value
+        return value, nil
+    }
+    if e.outer != nil {
+        return e.outer.Assign(name, value)
+    }
+    return nil, fmt.Errorf("Missing variable %s ", name)
+}
+```
+
+Unlike `Define`, `Assign` searches upward through enclosing scopes until it finds the name. This means `x = 99` inside a function body can update a variable that was declared in an outer scope. If the name is not found anywhere in the chain, `Assign` returns an error — you cannot assign to an undeclared variable.
 
 ### Get (Scope Chain Lookup)
 
@@ -147,7 +166,7 @@ Each time a function is called, the evaluator creates a **new enclosed environme
 func extendFunctionEnv(fn *object.Function, args []object.Object) *object.Environment {
     env := object.NewEnclosedEnvironment(fn.Env)
     for i, param := range fn.Parameters {
-        env.Set(param.Value, args[i])
+        env.Define(param.Value, args[i])
     }
     return env
 }
@@ -201,6 +220,6 @@ The scope chain at this point:
 ## Key Takeaways
 
 - The environment is a **linked list of hash maps**. Each node holds one scope's bindings plus a pointer to the enclosing scope.
-- **`Set`** always writes to the current scope. **`Get`** walks up the chain until it finds the name or runs out of scopes.
+- **`Define`** always writes to the current scope (used by `let`). **`Assign`** walks up the chain to update an existing binding (used by reassignment). **`Get`** walks up the chain until it finds the name or runs out of scopes.
 - **Closures** work because function objects capture their defining environment, and calls extend _that_ environment rather than the caller's.
 - This design is simple, correct, and efficient enough for an educational interpreter. Production interpreters often use more complex structures (e.g. stack-allocated frames), but the core idea of chained scopes is the same.
