@@ -43,17 +43,19 @@ flowchart TD
 **Prerequisites:** Go 1.21 or later.
 
 ```bash
-git clone https://github.com/thetangentline/interpreter.git
-cd interpreter
+git clone https://github.com/TheTangentLine/Learn_interpreter.git
+cd Learn_interpreter
 make build          # compiles to bin/dot
 ```
 
-| Goal | Command |
-|---|---|
-| Start the REPL | `make run` or `./bin/dot` |
-| Run a `.dot` file | `./bin/dot examples/recursion_test.dot` |
-| Run all tests | `make test` |
-| Run tests (verbose) | `make test-verbose` |
+
+| Goal                | Command                                 |
+| ------------------- | --------------------------------------- |
+| Start the REPL      | `make run` or `./bin/dot`               |
+| Run a `.dot` file   | `./bin/dot examples/recursion_test.dot` |
+| Run all tests       | `make test`                             |
+| Run tests (verbose) | `make test-verbose`                     |
+
 
 ## REPL
 
@@ -77,15 +79,15 @@ The two modes share the same Lexer → Parser → Evaluator pipeline. The differ
 ## Language Features
 
 
-| Feature               | Example                                       |
-| --------------------- | --------------------------------------------- |
-| Variable binding      | `let x = 10;`                                 |
-| Variable reassignment | `x = 42;`                                     |
-| Arithmetic            | `x + 2 * 3`                                   |
-| Boolean logic         | `if (x > 5) { "big" } else { "small" }`       |
-| Functions & closures  | `let add = fn(a, b) { a + b };`               |
-| Return statements     | `return x + y;`                               |
-| String values         | `"hello" + " world"`                          |
+| Feature               | Example                                      |
+| --------------------- | -------------------------------------------- |
+| Variable binding      | `let x = 10;`                                |
+| Variable reassignment | `x = 42;`                                    |
+| Arithmetic            | `x + 2 * 3`                                  |
+| Boolean logic         | `if (x > 5) { "big" } else { "small" }`      |
+| Functions & closures  | `let add = fn(a, b) { a + b };`              |
+| Return statements     | `return x + y;`                              |
+| String values         | `"hello" + " world"`                         |
 | For loops             | `for (let i = 0; i < 10; i = i + 1) { ... }` |
 
 
@@ -140,7 +142,7 @@ Detailed write-ups on how each component works:
 ## Project Structure
 
 ```
-interpreter/
+Learn_interpreter/
 ├── cmd/
 │   └── dot/             # Entry point -- starts the REPL or runs a file
 ├── internal/
